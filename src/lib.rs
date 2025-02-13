@@ -133,6 +133,29 @@ impl DerivationPath {
         Self::bip4x(44, coin, account, change, address)
     }
 
+    /// Build a BIP44 style [DerivationPath] with hardened keys: `m/44'/coin'/account'/change'/address'`
+    /// Will return an [ChildIndexError] if hardened keys are provided.
+    #[inline]
+    pub fn bip44_hardened(
+        coin: u32,
+        account: u32,
+        change: u32,
+        address: u32,
+    ) -> Result<Self, DerivationPathError> {
+        Self::bip4x_hardened(44, coin, account, change, address)
+    }
+
+    /// Build a BIP44 style [DerivationPath] with hardened keys: `m/44'/coin'/account'/change'/address'`
+    #[inline]
+    pub fn bip44_hardened_from_any(
+        coin: u32,
+        account: u32,
+        change: u32,
+        address: u32,
+    ) -> Result<Self, DerivationPathError> {
+        Self::bip4x_hardened_from_any(44, coin, account, change, address)
+    }
+
     /// Build a BIP49 style [DerivationPath]: `m/49'/coin'/account'/change/address`
     #[inline]
     pub fn bip49(
@@ -159,6 +182,46 @@ impl DerivationPath {
                 ChildIndex::hardened(account)?,
                 ChildIndex::normal(change)?,
                 ChildIndex::normal(address)?,
+            ]
+            .as_ref(),
+        ))
+    }
+
+    #[inline]
+    fn bip4x_hardened(
+        purpose: u32,
+        coin: u32,
+        account: u32,
+        change: u32,
+        address: u32,
+    ) -> Result<Self, DerivationPathError> {
+        Ok(Self::new(
+            [
+                ChildIndex::hardened(purpose)?,
+                ChildIndex::hardened(coin)?,
+                ChildIndex::hardened(account)?,
+                ChildIndex::hardened(change)?,
+                ChildIndex::hardened(address)?,
+            ]
+            .as_ref(),
+        ))
+    }
+
+    #[inline]
+    fn bip4x_hardened_from_any(
+        purpose: u32,
+        coin: u32,
+        account: u32,
+        change: u32,
+        address: u32,
+    ) -> Result<Self, DerivationPathError> {
+        Ok(Self::new(
+            [
+                ChildIndex::hardened(purpose)?,
+                ChildIndex::hardened(coin)?,
+                ChildIndex::hardened(account)?,
+                ChildIndex::hardened_from_any(change),
+                ChildIndex::hardened_from_any(address),
             ]
             .as_ref(),
         ))
@@ -295,6 +358,13 @@ impl ChildIndex {
     /// in `[0, 2^31 - 1]`
     pub fn hardened(num: u32) -> Result<Self, ChildIndexError> {
         Ok(Self::Hardened(Self::check_size(num)?))
+    }
+
+    pub fn hardened_from_any(num: u32) -> Self {
+        match Self::check_size(num) {
+            Ok(num) => Self::Hardened(num),
+            Err(_) => Self::Hardened(num & !0x80000000),
+        }
     }
 
     /// Create a [ChildIndex::Normal] instance from a [u32]. This will fail if `num` is not
